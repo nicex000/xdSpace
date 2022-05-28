@@ -1,4 +1,5 @@
 #pragma once
+#include "Transform.h"
 #include "Vector3.h"
 
 namespace xdSpace
@@ -13,9 +14,9 @@ namespace xdSpace
 
 	struct Sphere
 	{
-		Sphere(Point3 _c, Scalar _r) : center(_c), radius(_r) {};
+		Sphere(Point3 _c, float _r) : center(_c), radius(_r) {};
 		Point3 center;
-		Scalar radius;
+		float radius;
 	};
 
 	struct Plane
@@ -25,18 +26,23 @@ namespace xdSpace
 		Versor3 normal;
 	};
 
-	bool rayCast(Ray ray, Sphere sphere, Point3& hitPos, Point3& hitNormal, float& maxDistance)
+	Sphere Apply(const Transform& a, const Sphere& s)
+	{
+		return Sphere(a.TransformPoint(s.center), a.TransformScale(s.radius));
+	}
+
+	bool RayCast(Ray ray, Sphere sphere, Point3& hitPos, Point3& hitNormal, float& maxDistance)
 	{
 
 		//a*k^2 + b*k + c = 0
-		Scalar a = 1.f;
-		Scalar b = 2.f * dot(ray.dir, ray.pos - sphere.center);
-		Scalar c = (ray.pos - sphere.center).SquareMagnitude() - sphere.radius * sphere.radius;
+		float a = 1.f;
+		float b = 2.f * dot(ray.dir, ray.pos - sphere.center);
+		float c = (ray.pos - sphere.center).SquareMagnitude() - sphere.radius * sphere.radius;
 
-		Scalar delta = b*b - 4*a*c;
+		float delta = b*b - 4*a*c;
 		if (delta < 0) return false; //ray missed the sphere
 
-		Scalar distance = (-b - sqrt(delta)) / (2 * a);
+		float distance = (-b - sqrt(delta)) / (2 * a);
 
 		if (distance < 0) return false;
 		if (distance > maxDistance) return false;
@@ -47,12 +53,12 @@ namespace xdSpace
 		return true;
 	}
 
-	bool rayCast(Ray ray, Plane plane, Point3& hitPos, Point3& hitNormal, float& maxDistance)
+	bool RayCast(Ray ray, Plane plane, Point3& hitPos, Point3& hitNormal, float& maxDistance)
 	{
-		Scalar dn = dot(ray.dir, plane.normal);
+		float dn = dot(ray.dir, plane.normal);
 		if (dn == 0.f) return false;
 
-		Scalar distance = dot(plane.pos - ray.pos, plane.normal) / dn;
+		float distance = dot(plane.pos - ray.pos, plane.normal) / dn;
 		if (distance < 0.f) return false;
 		if (distance > maxDistance) return false;
 		maxDistance = distance;
