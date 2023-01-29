@@ -9,6 +9,7 @@ namespace xdSpace
 	{
 	public:
 		std::vector<GameObject> objs;
+		std::vector<WorldPlane> planes;
 
 		void Populate(int n)
 		{
@@ -28,6 +29,40 @@ namespace xdSpace
 			{
 				res.push_back(Apply(go.transform, go.body));
 				res.push_back(Apply(go.transform, go.nose));
+			}
+		}
+
+		void ToWorld(std::vector<Plane>& res) const
+		{
+			res.clear();
+			for (const WorldPlane& go : planes)
+			{
+				res.push_back(Apply(go.transform, go.plane));
+			}
+		}
+
+		void ToObjectLocal(std::vector<Sphere>& res, const int objectIndex) const
+		{
+			if (objectIndex < 0 || objectIndex >= objs.size()) return ToWorld(res);
+
+			Transform local = objs[objectIndex].transform.Inverse();
+			res.clear();
+			for (const GameObject& go : objs)
+			{
+				res.push_back(Apply(local, Apply(go.transform, go.body)));
+				res.push_back(Apply(local, Apply(go.transform, go.nose)));
+			}
+		}
+
+		void ToObjectLocal(std::vector<Plane>& res, const int objectIndex) const
+		{
+			if (objectIndex < 0 || objectIndex >= objs.size()) return ToWorld(res);
+
+			Transform local = objs[objectIndex].transform.Inverse();
+			res.clear();
+			for (const WorldPlane& go : planes) 
+			{
+				res.push_back(Apply(local, Apply(go.transform, go.plane)));
 			}
 		}
 	};

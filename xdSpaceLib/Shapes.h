@@ -31,6 +31,11 @@ namespace xdSpace
 		return Sphere(a.TransformPoint(s.center), a.TransformScale(s.radius));
 	}
 
+	Plane Apply(const Transform& a, const Plane& p)
+	{
+		return Plane(a.TransformPoint(p.pos), a.TransformVersor(p.normal));
+	}
+
 	bool RayCast(Ray ray, Sphere sphere, Point3& hitPos, Point3& hitNormal, float& maxDistance)
 	{
 

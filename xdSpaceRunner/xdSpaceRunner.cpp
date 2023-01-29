@@ -15,6 +15,7 @@
 #include "Quaternion.h"
 #include "Scene.h"
 #include "Transform.h"
+#include <future>
 
 using namespace xdSpace;
 
@@ -201,11 +202,10 @@ void RayCastSphereFromCamera()
 	std::cout << outStream;
 }
 
-void RayCastGameObjects(const std::vector<Sphere>& spheres)
+void RayCastGameObjects(const std::vector<Sphere>& spheres, const std::vector<Plane>& planes, const Camera& camera)
 {
 	float time = getCurrentTime();
 
-	Camera camera(2.f, 300, 300);
 	Plane plane(Point3(0, -1, 0), Point3(0, 1, 0));
 	std::string outStream;
 	lightDir = Versor3(std::cos(time * 0.5f), 1.f, std::sin(time * 0.2f) - 2).Normalized();
@@ -221,6 +221,11 @@ void RayCastGameObjects(const std::vector<Sphere>& spheres)
 			{
 				RayCast(camera.PrimaryRay(x, y), sphere, hitPos, hitNormal, maxDistance);
 			}
+			for (const Plane& plane : planes)
+			{
+				RayCast(camera.PrimaryRay(x, y), plane, hitPos, hitNormal, maxDistance);
+			}
+
 
 			//RayCast(camera.PrimaryRay(x, y), plane, hitPos, hitNormal, maxDistance);
 
@@ -234,6 +239,57 @@ void RayCastGameObjects(const std::vector<Sphere>& spheres)
 }
 
 
+int nonBlockingGetChar()
+{
+	if (_kbhit()) {
+		return _getch();
+	}
+	else {
+		return -1;
+	}
+}
+
+int nonBlockingGetCharTask()
+{	
+	return nonBlockingGetChar();
+}
+
+void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& viewMode)
+{
+	switch (keyInput)
+	{
+	case 72: //arrow up
+		++objToControl;
+		if (objToControl >= scene.objs.size()) objToControl = 0;
+		break;
+	case 80: //arrow down
+		--objToControl;
+		if (objToControl < 0) objToControl = scene.objs.size() -1;
+		break;
+	case ' ':
+		viewMode = !viewMode;
+		break;
+	default:
+		Transform temp;
+		switch (keyInput)
+		{
+		case 'w': temp.translation = Forward * 0.3; break; //move forward
+		case 's': temp.translation = Forward * -0.3; break; //move backward
+		case 'A': temp.translation = Right * -0.3; break; //move left
+		case 'D': temp.translation = Right * 0.3; break; //move right
+		case 'R': temp.translation = Up * 0.3; break; //move up
+		case 'F': temp.translation = Up * -0.3; break; //move down
+		case 'a': temp.rotation = Quaternion::FromAngleAxis(-2, Up); break; //rotate left
+		case 'd': temp.rotation = Quaternion::FromAngleAxis(2, Up); break; //rotate right
+		case 'r': temp.rotation = Quaternion::FromAngleAxis(-2, Right); break; //rotate up
+		case 'f': temp.rotation = Quaternion::FromAngleAxis(2, Right); break; //rotate down
+		}
+		scene.objs[objToControl].transform = scene.objs[objToControl].transform * temp;
+	}
+
+
+}
+
 void fun()
 {
 	auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -243,18 +299,34 @@ void fun()
 	std::srand(std::time(nullptr));
 
 	Scene scene;
+	scene.planes.push_back(WorldPlane());
 	scene.Populate(26);
 	std::vector<Sphere> spheres;
+	std::vector<Plane> planes;
+
+	Camera camera(2.f, 80, 80);
+
+	int objToControl = 0;
+	bool viewFromObj = false;
 
 	while (true)
 	{
+		std::future<int> getCharHandle{ std::async(std::launch::async, nonBlockingGetCharTask) };
 
+		
 		// Finally, call the SetConsoleCursorPosition function.
 		SetConsoleCursorPosition(hConsole, coord);
 		//system("cls");
 		//RayCastSphereFromCamera();
-		scene.ToWorld(spheres);
-		RayCastGameObjects(spheres);
+		viewFromObj ? scene.ToObjectLocal(spheres, objToControl) : scene.ToWorld(spheres);
+		viewFromObj ? scene.ToObjectLocal(planes, objToControl) : scene.ToWorld(planes);
+
+		RayCastGameObjects(spheres, planes, camera);
+		int userInput{ getCharHandle.get() };
+		if (userInput > -1)
+		{
+			handleInput(userInput, scene, objToControl, viewFromObj);
+		}
 	}
 }
 
@@ -271,6 +343,11 @@ int main()
 	unitTestTransforms();
 
 	//return 1;
+	std::cout << "Controls: \n - arrow up/down to cycle target to control." <<
+		"\n - space to switch between 1st person and world view. (world is default)" <<
+		"\n - w/s to move forward/backward. A/D to move left/right. R/F to move up/down." <<
+		"\n - a/d to rotate left/right. r/t to rotate up/down." <<
+		"\n\nzoom out of the console and make the window larger, the resolution might be set quite high!\n";
 	system("pause");
 	start = std::chrono::system_clock::now();
 

@@ -20,6 +20,7 @@ namespace xdSpace
 		Vector3(float _x, float _y, float _z) : x(_x), y(_y), z(_z)
 		{}
 
+
 		Vector3 operator*(float k) const { return { k * x, k * y, k * z }; }
 		void operator*=(float k) { x *= k; y *= k; z *= k; }
 
@@ -108,5 +109,11 @@ namespace xdSpace
 
 	typedef Vector3 Point3;
 	typedef Vector3 Versor3;
+
+	static Vector3 Zero(0.f, 0.f, 0.f);
+	static Vector3 Forward(0.f, 0.f, 1.f);
+	static Vector3 Up(0.f, 1.f, 0.f);
+	static Vector3 Right(1.f, 0.f, 0.f);
+
 
 }
