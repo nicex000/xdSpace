@@ -254,7 +254,7 @@ int nonBlockingGetCharTask()
 	return nonBlockingGetChar();
 }
 
-void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& viewMode)
+void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& viewMode, bool& enablePlane)
 {
 	switch (keyInput)
 	{
@@ -264,33 +264,45 @@ void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& view
 		break;
 	case 80: //arrow down
 		--objToControl;
-		if (objToControl < 0) objToControl = scene.objs.size() -1;
+		if (objToControl < 0) objToControl = scene.objs.size() - 1;
+		break;
+	case 9:
+		enablePlane = !enablePlane;
 		break;
 	case ' ':
 		viewMode = !viewMode;
 		break;
 	default:
-		Transform temp;
-		switch (keyInput)
+
+		if (keyInput >= 48 && keyInput <= 57)
 		{
-		case 'w': temp.translation = Forward * 0.3; break; //move forward
-		case 's': temp.translation = Forward * -0.3; break; //move backward
-		case 'A': temp.translation = Right * -0.3; break; //move left
-		case 'D': temp.translation = Right * 0.3; break; //move right
-		case 'R': temp.translation = Up * 0.3; break; //move up
-		case 'F': temp.translation = Up * -0.3; break; //move down
-		case 'a': temp.rotation = Quaternion::FromAngleAxis(-2, Up); break; //rotate left
-		case 'd': temp.rotation = Quaternion::FromAngleAxis(2, Up); break; //rotate right
-		case 'r': temp.rotation = Quaternion::FromAngleAxis(-2, Right); break; //rotate up
-		case 'f': temp.rotation = Quaternion::FromAngleAxis(2, Right); break; //rotate down
+			objToControl = keyInput - 48;
+			if (objToControl >= scene.objs.size()) objToControl = scene.objs.size() - 1;
 		}
-		scene.objs[objToControl].transform = scene.objs[objToControl].transform * temp;
+		else
+		{
+			Transform temp;
+			switch (keyInput)
+			{
+			case 'w': temp.translation = Forward * 0.3; break; //move forward
+			case 's': temp.translation = Forward * -0.3; break; //move backward
+			case 'A': temp.translation = Right * -0.3; break; //move left
+			case 'D': temp.translation = Right * 0.3; break; //move right
+			case 'R': temp.translation = Up * 0.3; break; //move up
+			case 'F': temp.translation = Up * -0.3; break; //move down
+			case 'a': temp.rotation = Quaternion::FromAngleAxis(-2, Up); break; //rotate left
+			case 'd': temp.rotation = Quaternion::FromAngleAxis(2, Up); break; //rotate right
+			case 'r': temp.rotation = Quaternion::FromAngleAxis(-2, Right); break; //rotate up
+			case 'f': temp.rotation = Quaternion::FromAngleAxis(2, Right); break; //rotate down
+			}
+			scene.objs[objToControl].transform = scene.objs[objToControl].transform * temp;
+		}
 	}
 
 
 }
 
-void fun()
+void fun(int spheresToPopulate, int pixelsX, int pixelsY)
 {
 	auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	COORD coord;
@@ -300,14 +312,15 @@ void fun()
 
 	Scene scene;
 	scene.planes.push_back(WorldPlane());
-	scene.Populate(26);
+	scene.Populate(spheresToPopulate);
 	std::vector<Sphere> spheres;
 	std::vector<Plane> planes;
 
-	Camera camera(2.f, 80, 80);
+	Camera camera(2.f, pixelsX, pixelsY);
 
 	int objToControl = 0;
 	bool viewFromObj = false;
+	bool enablePlane = true;
 
 	while (true)
 	{
@@ -319,13 +332,16 @@ void fun()
 		//system("cls");
 		//RayCastSphereFromCamera();
 		viewFromObj ? scene.ToObjectLocal(spheres, objToControl) : scene.ToWorld(spheres);
-		viewFromObj ? scene.ToObjectLocal(planes, objToControl) : scene.ToWorld(planes);
+		if (enablePlane)
+			viewFromObj ? scene.ToObjectLocal(planes, objToControl) : scene.ToWorld(planes);
+		else
+			planes.clear();
 
 		RayCastGameObjects(spheres, planes, camera);
 		int userInput{ getCharHandle.get() };
 		if (userInput > -1)
 		{
-			handleInput(userInput, scene, objToControl, viewFromObj);
+			handleInput(userInput, scene, objToControl, viewFromObj, enablePlane);
 		}
 	}
 }
@@ -344,12 +360,14 @@ int main()
 
 	//return 1;
 	std::cout << "Controls: \n - arrow up/down to cycle target to control." <<
-		"\n - space to switch between 1st person and world view. (world is default)" <<
+		"\n - 0-9 to control the first 10 targets." <<
+		"\n - space to switch between 1st person and world view. (world is default)." <<
 		"\n - w/s to move forward/backward. A/D to move left/right. R/F to move up/down." <<
 		"\n - a/d to rotate left/right. r/t to rotate up/down." <<
+		"\n - tab to enable/disable the plane." <<
 		"\n\nzoom out of the console and make the window larger, the resolution might be set quite high!\n";
 	system("pause");
 	start = std::chrono::system_clock::now();
 
-	fun();
+	fun(26, 100, 100);
 }
