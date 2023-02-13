@@ -202,13 +202,14 @@ void RayCastSphereFromCamera()
 	std::cout << outStream;
 }
 
-void RayCastGameObjects(const std::vector<Sphere>& spheres, const std::vector<Plane>& planes, const Camera& camera)
+void RayCastGameObjects(const std::vector<Sphere>& spheres, const std::vector<Plane>& planes, const Camera& camera, const bool lightMovement)
 {
 	float time = getCurrentTime();
 
 	Plane plane(Point3(0, -1, 0), Point3(0, 1, 0));
 	std::string outStream;
-	lightDir = Versor3(std::cos(time * 0.5f), 1.f, std::sin(time * 0.2f) - 2).Normalized();
+	const float lightTime = lightMovement ? time : 1.f;
+	lightDir = Versor3(std::cos(lightTime * 0.5f), 1.f, std::sin(lightTime * 0.2f) - 2).Normalized();
 
 	for (int y = 0; y < camera.pixelCountY; ++y)
 	{
@@ -254,7 +255,7 @@ int nonBlockingGetCharTask()
 	return nonBlockingGetChar();
 }
 
-void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& viewMode, bool& enablePlane)
+void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& viewMode, bool& enablePlane, bool& enableLightMovement)
 {
 	switch (keyInput)
 	{
@@ -266,11 +267,14 @@ void handleInput(const int keyInput, Scene& scene, int& objToControl, bool& view
 		--objToControl;
 		if (objToControl < 0) objToControl = scene.objs.size() - 1;
 		break;
-	case 9:
+	case 9: //tab
 		enablePlane = !enablePlane;
 		break;
 	case ' ':
 		viewMode = !viewMode;
+		break;
+	case 'l':
+		enableLightMovement = !enableLightMovement;
 		break;
 	default:
 
@@ -321,6 +325,7 @@ void fun(int spheresToPopulate, int pixelsX, int pixelsY)
 	int objToControl = 0;
 	bool viewFromObj = false;
 	bool enablePlane = true;
+	bool enableLightMovement = true;
 
 	while (true)
 	{
@@ -337,11 +342,11 @@ void fun(int spheresToPopulate, int pixelsX, int pixelsY)
 		else
 			planes.clear();
 
-		RayCastGameObjects(spheres, planes, camera);
+		RayCastGameObjects(spheres, planes, camera, enableLightMovement);
 		int userInput{ getCharHandle.get() };
 		if (userInput > -1)
 		{
-			handleInput(userInput, scene, objToControl, viewFromObj, enablePlane);
+			handleInput(userInput, scene, objToControl, viewFromObj, enablePlane, enableLightMovement);
 		}
 	}
 }
@@ -365,6 +370,7 @@ int main()
 		"\n - w/s to move forward/backward. A/D to move left/right. R/F to move up/down." <<
 		"\n - a/d to rotate left/right. r/t to rotate up/down." <<
 		"\n - tab to enable/disable the plane." <<
+		"\n - l to enable/disable the lighting movement." <<
 		"\n\nzoom out of the console and make the window larger, the resolution might be set quite high!\n";
 	system("pause");
 	start = std::chrono::system_clock::now();
